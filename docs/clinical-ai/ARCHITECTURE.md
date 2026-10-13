@@ -9,8 +9,12 @@
 5. **Transcription Worker** — synthetic only (`SYNTHETIC_TRANSCRIPT`).
 6. **Speaker-Diarisation Layer** — speaker labels carried on synthetic segments.
 7. **Consultation-State Engine** — typed state machine (`NOT_STARTED` … `SIGNED`/`FAILED`).
-8. **Specialist Documentation Engines** — selected by `taskType` (assessment note, ADHD/Autism report, letters, message reply).
-9. **Message-Drafting Engine** — three distinct drafts; never sends automatically.
+8. **Specialist Documentation Engines** — selected by `taskType` via the registry
+   in `src/lib/ai/specialists.ts` (assessment note, ADHD/Autism report, letters,
+   titration/medication review, message reply).
+9. **Message-Drafting Engine** — three distinct drafts (`src/lib/ai/message-drafts.ts`);
+   never sends automatically. Sending requires `clinical:message:reply`, a passed
+   approval gate and an explicit attestation, authorised by `canSendMessageDraft`.
 10. **Evidence and Provenance Engine** — `src/lib/ai/grounding.ts` (`computeGrounding`).
 11. **Missing-Information Engine** — `detectMissingInformation`.
 12. **Contradiction Engine** — `detectContradictions`.

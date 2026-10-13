@@ -16,7 +16,11 @@ The AI must never:
 
 These are enforced structurally: the orchestrator has no capability to sign, send or
 share. Those actions live only behind human-review Server Actions requiring
-`clinical:note:sign` / `clinical:message:reply`.
+`clinical:note:sign` / `clinical:message:reply`. The message send gate is
+`canSendMessageDraft` (`src/lib/ai/message-drafts.ts`): it requires the
+`clinical:message:reply` capability, a passed approval gate, an accepted
+attestation and a sendable draft status, and it only ever returns a decision — it
+performs no send.
 
 ## Evidence classifications
 Every generated statement carries one of:

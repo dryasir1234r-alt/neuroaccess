@@ -36,3 +36,13 @@ checked. Signing is versioned and locked; amendment creates a new version.
 - All controls are native buttons/inputs with visible focus.
 - Status is conveyed by text + glyph, never colour alone.
 - Panels are labelled with `aria-label`; the transcript is an ordered list.
+
+## Message replies (three drafts)
+Patient messages use a dedicated engine (`src/lib/ai/message-drafts.ts`) that
+produces exactly three deliberately distinct reply drafts (warm, concise,
+detailed) through the same orchestrator flow, so each carries its own grounding,
+contradiction, missing-information and safety result. The engine has no send
+path. Sending requires a human-review Server Action that checks
+`canSendMessageDraft` — the `clinical:message:reply` capability, a passed
+approval gate, an accepted attestation and a sendable draft status. Verified by
+`tests/message-drafts.test.ts`.

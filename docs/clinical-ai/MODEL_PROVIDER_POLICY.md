@@ -20,6 +20,9 @@ provider name to an implementation. No vendor SDK is imported by clinical code.
 4. Provider failure is surfaced explicitly (`MODEL_PROVIDER_FAILURE`); it is never
    swallowed or silently retried with a different provider.
 5. Every generation records provider name and version for audit.
+6. A single engine may request several deliberately distinct drafts by passing a
+   `variant` on the generation request (used by the message-reply engine); the
+   provider contract is otherwise unchanged.
 
 ## Failure behaviour
 `ModelProviderError` carries `provider` and `retryable`. The orchestrator records an

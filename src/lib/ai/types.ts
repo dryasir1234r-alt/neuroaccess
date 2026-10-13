@@ -112,3 +112,34 @@ export interface ClinicalContext {
   readonly structuredRecords: readonly { readonly id: string; readonly summary: string }[];
   readonly consentGranted: boolean;
 }
+
+/**
+ * The kinds of assistive draft the specialist documentation engines produce.
+ * Mirrors the `AIDraftType` Prisma enum so clinical code and persistence stay in
+ * step; every member must have exactly one registered specialist engine.
+ */
+export const AI_DRAFT_TYPES = [
+  'ASSESSMENT_NOTE',
+  'ADHD_REPORT',
+  'AUTISM_REPORT',
+  'TITRATION_NOTE',
+  'MEDICATION_REVIEW',
+  'DIAGNOSTIC_FEEDBACK',
+  'ANNUAL_REVIEW',
+  'SHARED_CARE_REVIEW',
+  'RISK_REVIEW',
+  'MDT_REVIEW',
+  'FOLLOW_UP',
+  'TELEPHONE_CONTACT',
+  'GP_LETTER',
+  'SUPPORT_LETTER',
+  'OCCUPATIONAL_HEALTH_LETTER',
+  'TITRATION_SUMMARY',
+  'END_OF_TITRATION_LETTER',
+  'SHARED_CARE_REQUEST',
+  'ANNUAL_REVIEW_REPORT',
+  'DISCHARGE_LETTER',
+  'MESSAGE_REPLY',
+] as const;
+
+export type AIDraftType = (typeof AI_DRAFT_TYPES)[number];

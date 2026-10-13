@@ -35,6 +35,8 @@ export interface OrchestratorRequest {
   readonly context: ClinicalContext;
   readonly requiredTopics: readonly string[];
   readonly seed?: string;
+  /** Optional named variant (e.g. message-reply tone) passed to the provider. */
+  readonly variant?: string;
 }
 
 export interface OrchestratorAudit {
@@ -106,6 +108,7 @@ export async function generateDraft(
       promptTemplateId: request.promptTemplateId,
       context: request.context,
       seed: request.seed,
+      variant: request.variant,
     });
   } catch (err) {
     const message = err instanceof ModelProviderError ? err.message : 'Model provider failure.';

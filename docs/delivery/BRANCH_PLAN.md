@@ -21,6 +21,8 @@ Branches are completed one at a time; each solves one problem.
 | 17 | `feat/clinical-ai-foundation` | AI orchestrator, gateway, grounding | Done (this slice) |
 | 18 | `feat/consultation-transcription` | Consultation state + consent | Done (synthetic) |
 | 19 | `feat/clinical-note-assistant` | Note drafting | Done (synthetic) |
+| 20 | `feat/specialist-documentation-engines` | Report/letter/titration engines + registry | Done (this slice) |
+| 21 | `feat/message-reply-drafts` | Three-draft message engine + send gate | Done (this slice) |
 | 22 | `feat/transcript-evidence-review` | Three-panel review | Done (this slice) |
 | 23 | `feat/ai-clinical-safety` | Safety layer + approval gate | Done (this slice) |
 | 24–28 | hardening/* | Performance, security, a11y, observability, governance | Planned |

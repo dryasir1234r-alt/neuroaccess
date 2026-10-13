@@ -24,6 +24,11 @@ Prove the AI layer is safe, grounded and useful before any real clinical use.
   missing information, safety, approval gate.
 - `tests/vertical-slice.test.ts` — end-to-end generation, contradiction handling,
   provider failure, consent denial.
+- `tests/specialists.test.ts` — registry completeness across every `AIDraftType`,
+  specialist dispatch, single-draft grounding, report missing-information,
+  capability/flag/consent denial, three distinct message drafts.
+- `tests/message-drafts.test.ts` — three distinct reply drafts, never sent, send
+  gate (capability + approval gate + attestation).
 - `tests/prompt-injection.test.ts` — injection detection and envelope escaping.
 
 ## Not yet measured

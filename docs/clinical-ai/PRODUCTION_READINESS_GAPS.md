@@ -11,6 +11,11 @@ self-contained.
 - Consultation state machine with immediate withdrawal.
 - Provider-independent model gateway; clinical code has no vendor dependency.
 - Orchestrator with the mandated 18-step flow.
+- Specialist documentation engine registry covering every `AIDraftType`
+  (`src/lib/ai/specialists.ts`); a missing engine is a compile error.
+- Report, letter and titration/medication-review drafting (synthetic provider).
+- Message-drafting engine: three deliberately distinct reply drafts, never sent
+  automatically, with an explicit send gate (`src/lib/ai/message-drafts.ts`).
 - Evidence/provenance engine; per-statement classification.
 - Contradiction detection (surfaced, never resolved).
 - Missing-information detection (stays visibly missing).
@@ -20,10 +25,10 @@ self-contained.
 - Synthetic transcript workflow end to end.
 
 ## Partially implemented (AI)
-- Message-reply assistant (three-draft design specified; engine not yet wired).
-- Titration/medication-review drafting engines (types defined; generation pending).
-- Report/letter engines (registry exists; generation pending).
 - AI audit review interface (flag + capability exist; UI pending).
+- Provider coverage: only `synthetic` is implemented; `local` and
+  `approvedCloud` are scaffolded behind flags.
+
 
 ## Requiring clinical approval (AI)
 - Any real use of AI-generated content in clinical documentation.

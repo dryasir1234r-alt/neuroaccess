@@ -14,6 +14,12 @@ export interface GenerationRequest {
   readonly context: ClinicalContext;
   /** Deterministic seed so synthetic/test output is reproducible. */
   readonly seed?: string;
+  /**
+   * Optional named variant of the same task (e.g. the tone of a message reply
+   * draft). Lets a single specialist engine request several deliberately
+   * distinct drafts without changing the provider interface.
+   */
+  readonly variant?: string;
 }
 
 export interface GenerationResponse {

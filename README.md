@@ -32,7 +32,7 @@ npm run dev                         # http://localhost:3000
 
 ## Validation
 ```bash
-npm test              # 46 tests
+npm test              # 71 tests
 npm run typecheck     # strict TypeScript, no errors
 npx prisma validate   # schema
 npx next build        # production build
@@ -48,7 +48,8 @@ src/
     journey/          care-journey state machine + transition table
     permissions/      capability-based authorisation engine
     features/         server-side feature-flag engine + registry
-    ai/               orchestrator, gateway, grounding, consent, providers
+    ai/               orchestrator, gateway, grounding, consent, specialists,
+                      message-drafts, providers
     demo/             synthetic demo data
 prisma/
   schema.prisma       canonical domain model

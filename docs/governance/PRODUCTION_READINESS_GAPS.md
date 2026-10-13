@@ -13,12 +13,15 @@ compliance claim.
 - Clinical AI orchestrator with consent gate, provider-independent gateway,
   evidence mapping, contradiction detection, missing-information detection,
   deterministic safety layer and approval gate.
+- Specialist documentation engine registry covering every AI draft type, with
+  report, letter and titration/medication-review generation.
+- Three-draft message-reply engine with an explicit human send gate.
 - Untrusted-content envelope + prompt-injection detection.
 - Consultation consent state machine with immediate withdrawal.
 - Synthetic transcript workflow end to end.
 - Audit model for AI actions (counts/reasons only).
 - Strict TypeScript, no `any` in domain code, exhaustive enum handling.
-- 46 automated tests, all passing; production build succeeds.
+- 71 automated tests, all passing; production build succeeds.
 
 ## Partially implemented
 - **Authentication/MFA**: capability model is complete; NextAuth wiring is
