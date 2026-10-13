@@ -1,0 +1,961 @@
+// =============================================================================
+// NeuroAssess - canonical domain model
+// Single source of truth. PostgreSQL.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum CapabilityCategory {
+  PATIENT
+  CLINICAL
+  ADMIN
+  FINANCE
+  AI
+  SYSTEM
+}
+
+enum SubscriptionTier {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum JourneyStage {
+  LEAD
+  BOOKED
+  TRIAGE
+  INTAKE
+  ASSESSMENT
+  MORE_INFORMATION_REQUIRED
+  DIAGNOSIS_REVIEW
+  DIAGNOSIS_CONFIRMED
+  DIAGNOSIS_NOT_CONFIRMED
+  ECG_REQUESTED
+  MDT_REVIEW
+  TITRATION
+  PRESCRIBING
+  MAINTENANCE
+  SHARED_CARE
+  ANNUAL_REVIEW
+  OUTCOME
+  DISCHARGE
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum AssessmentType {
+  ADHD
+  AUTISM
+  COMBINED
+}
+
+enum AssessmentStatus {
+  SCHEDULED
+  IN_PROGRESS
+  AWAITING_INFORMATION
+  COMPLETED
+  CANCELLED
+}
+
+enum NoteStatus {
+  DRAFT
+  REVIEW
+  SIGNED
+  AMENDED
+}
+
+enum DiagnosisType {
+  ADHD
+  AUTISM
+  BOTH
+  NEITHER
+}
+
+enum DiagnosisStatus {
+  PROVISIONAL
+  CONFIRMED
+  REJECTED
+}
+
+enum PrescriptionStatus {
+  DRAFT
+  PENDING_REVIEW
+  PENDING_SIGNATURE
+  SIGNED
+  SENT_TO_PHARMACY
+  PHARMACY_ACKNOWLEDGED
+  DISPENSED
+  DISPATCHED
+  DELIVERED
+  ON_HOLD
+  CANCELLED
+  RETURNED
+  FAILED
+}
+
+enum RepeatRequestStatus {
+  REQUESTED
+  SAFETY_INFORMATION_REQUIRED
+  CLINICAL_REVIEW_REQUIRED
+  APPROVED
+  DECLINED
+  PRESCRIPTION_CREATED
+  COMPLETED
+}
+
+enum ConsentType {
+  TRANSCRIPTION
+  DATA_SHARING
+  TREATMENT
+  AI_PROCESSING
+}
+
+enum VisibilityLevel {
+  PATIENT
+  ASSIGNED_CLINICAL_TEAM
+  CLINICAL_ORGANISATION
+  ADMIN
+  FINANCE
+  RESTRICTED
+}
+
+enum ProvenanceType {
+  DIRECT_TRANSCRIPT
+  STRUCTURED_RECORD
+  CLINICIAN_ENTERED
+  CALCULATED
+  TEMPLATE_LANGUAGE
+  AI_SYNTHESIS
+  UNSUPPORTED
+}
+
+enum AmendmentState {
+  ORIGINAL
+  AMENDED
+  SUPERSEDED
+}
+
+enum AIDraftType {
+  ASSESSMENT_NOTE
+  ADHD_REPORT
+  AUTISM_REPORT
+  TITRATION_NOTE
+  MEDICATION_REVIEW
+  DIAGNOSTIC_FEEDBACK
+  ANNUAL_REVIEW
+  SHARED_CARE_REVIEW
+  RISK_REVIEW
+  MDT_REVIEW
+  FOLLOW_UP
+  TELEPHONE_CONTACT
+  GP_LETTER
+  SUPPORT_LETTER
+  OCCUPATIONAL_HEALTH_LETTER
+  TITRATION_SUMMARY
+  END_OF_TITRATION_LETTER
+  SHARED_CARE_REQUEST
+  ANNUAL_REVIEW_REPORT
+  DISCHARGE_LETTER
+  MESSAGE_REPLY
+}
+
+enum AIDraftStatus {
+  GENERATING
+  DRAFT_READY
+  CLINICIAN_REVIEW
+  APPROVED
+  REJECTED
+  AMENDED
+  FAILED
+}
+
+enum TranscriptStatus {
+  NOT_STARTED
+  CONSENT_REQUIRED
+  READY
+  LISTENING
+  PAUSED
+  STOPPED
+  PROCESSING
+  DRAFT_READY
+  CLINICIAN_REVIEW
+  SIGNED
+  AMENDED
+  FAILED
+  CONSENT_WITHDRAWN
+}
+
+enum FeatureFlagState {
+  DISABLED
+  DEVELOPMENT_ONLY
+  INTERNAL_TESTING
+  SELECTED_CLINICIANS
+  SELECTED_PATIENTS
+  LIMITED_ROLLOUT
+  FULL_PRODUCTION
+  EMERGENCY_DISABLED
+}
+
+enum WorkflowSetting {
+  REQUIRED
+  OPTIONAL
+  DISABLED
+}
+
+enum QueueType {
+  REFERRAL
+  TRIAGE
+  INTAKE
+  ASSESSMENT
+  DIAGNOSIS
+  TITRATION
+  PRESCRIBING
+  MAINTENANCE
+  ANNUAL_REVIEW
+}
+
+// -----------------------------------------------------------------------------
+// Identity & Access
+// -----------------------------------------------------------------------------
+
+model Organisation {
+  id               String           @id @default(cuid())
+  name             String
+  slug             String           @unique
+  subscriptionTier SubscriptionTier @default(STARTER)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  users            User[]
+  patients         Patient[]
+  workflowConfig   OrganisationWorkflowConfig[]
+  featureOverrides OrganisationFeatureFlag[]
+  queues           Queue[]
+
+  @@index([slug])
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  DateTime?
+  passwordHash   String?
+  name           String
+  organisationId String
+  mfaEnabled     Boolean   @default(false)
+  mfaSecret      String?
+  lastLoginAt    DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organisation     Organisation     @relation(fields: [organisationId], references: [id])
+  roles            UserRole[]
+  capabilities     UserCapability[]
+  patientProfile   Patient?
+  assignedPatients Patient[]        @relation("AssignedClinician")
+
+  @@index([organisationId])
+  @@index([email])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  createdAt   DateTime @default(now())
+
+  users        UserRole[]
+  capabilities RoleCapability[]
+}
+
+model Capability {
+  id          String             @id @default(cuid())
+  code        String             @unique
+  description String
+  category    CapabilityCategory
+  createdAt   DateTime           @default(now())
+
+  roles RoleCapability[]
+  users UserCapability[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RoleCapability {
+  roleId       String
+  capabilityId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  capability   Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, capabilityId])
+}
+
+model UserCapability {
+  userId       String
+  capabilityId String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  capability   Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, capabilityId])
+}
+
+// -----------------------------------------------------------------------------
+// Care Journey
+// -----------------------------------------------------------------------------
+
+model Patient {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  organisationId      String
+  dateOfBirth         DateTime
+  gender              String
+  // Sensitive identifiers are stored encrypted at the application layer.
+  nhsNumberEnc        String?
+  phoneEnc            String?
+  addressEnc          String?
+  gpPractice          String?
+  assignedClinicianId String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  user              User            @relation(fields: [userId], references: [id])
+  organisation      Organisation    @relation(fields: [organisationId], references: [id])
+  assignedClinician User?           @relation("AssignedClinician", fields: [assignedClinicianId], references: [id])
+  journey           Journey?
+  assessments       Assessment[]
+  clinicalNotes     ClinicalNote[]
+  diagnoses         Diagnosis[]
+  prescriptions     Prescription[]
+  consents          Consent[]
+  documents         Document[]
+  timelineEvents    TimelineEvent[]
+  tasks             Task[]
+  messages          Message[]
+  queueEntries      QueueEntry[]
+  transcripts       Transcript[]
+
+  @@index([organisationId])
+  @@index([assignedClinicianId])
+}
+
+model Journey {
+  id                  String       @id @default(cuid())
+  patientId           String       @unique
+  stage               JourneyStage @default(LEAD)
+  version             Int          @default(1)
+  assignedClinicianId String?
+  blockers            Json         @default("[]")
+  startedAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  patient     Patient             @relation(fields: [patientId], references: [id])
+  transitions JourneyTransition[]
+
+  @@index([stage])
+}
+
+model JourneyTransition {
+  id                  String       @id @default(cuid())
+  journeyId           String
+  fromStage           JourneyStage
+  toStage             JourneyStage
+  command             String
+  actorId             String
+  reason              String
+  expectedVersion     Int
+  resultingVersion    Int
+  supportingRecordIds Json         @default("[]")
+  metadata            Json         @default("{}")
+  createdAt           DateTime     @default(now())
+
+  journey Journey @relation(fields: [journeyId], references: [id])
+
+  @@index([journeyId])
+  @@index([createdAt])
+}
+
+model Task {
+  id           String        @id @default(cuid())
+  patientId    String
+  type         String
+  status       TaskStatus    @default(OPEN)
+  title        String
+  description  String?
+  assigneeId   String?
+  journeyStage JourneyStage?
+  dueAt        DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([status])
+  @@index([assigneeId])
+}
+
+// -----------------------------------------------------------------------------
+// Clinical
+// -----------------------------------------------------------------------------
+
+model Assessment {
+  id          String           @id @default(cuid())
+  patientId   String
+  clinicianId String
+  type        AssessmentType
+  status      AssessmentStatus @default(SCHEDULED)
+  startedAt   DateTime?
+  completedAt DateTime?
+  outcome     Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  patient   Patient        @relation(fields: [patientId], references: [id])
+  notes     ClinicalNote[]
+  diagnoses Diagnosis[]
+
+  @@index([patientId])
+}
+
+model ClinicalNote {
+  id                String     @id @default(cuid())
+  patientId         String
+  assessmentId      String?
+  clinicianId       String
+  type              String
+  content           Json       @default("{}")
+  narrative         String?
+  status            NoteStatus @default(DRAFT)
+  version           Int        @default(1)
+  aiDraftId         String?
+  previousVersionId String?
+  signedAt          DateTime?
+  signedById        String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  patient    Patient     @relation(fields: [patientId], references: [id])
+  assessment Assessment? @relation(fields: [assessmentId], references: [id])
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model Diagnosis {
+  id                    String          @id @default(cuid())
+  patientId             String
+  assessmentId          String
+  clinicianId           String
+  type                  DiagnosisType
+  subtype               String?
+  severity              String?
+  criteria              Json            @default("{}")
+  confidence            String
+  differentialDiagnoses Json            @default("[]")
+  recommendedTreatment  String?
+  status                DiagnosisStatus @default(PROVISIONAL)
+  reviewedById          String?
+  reviewedAt            DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  patient    Patient    @relation(fields: [patientId], references: [id])
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([patientId])
+}
+
+model Document {
+  id           String          @id @default(cuid())
+  patientId    String
+  uploadedById String
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String
+  category     String
+  visibility   VisibilityLevel @default(ASSIGNED_CLINICAL_TEAM)
+  scanStatus   String          @default("PENDING")
+  createdAt    DateTime        @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+}
+
+// -----------------------------------------------------------------------------
+// Medication
+// -----------------------------------------------------------------------------
+
+model Prescription {
+  id               String             @id @default(cuid())
+  patientId        String
+  clinicianId      String
+  medication       String
+  dose             String
+  frequency        String
+  route            String             @default("ORAL")
+  quantity         Int
+  repeats          Int                @default(0)
+  status           PrescriptionStatus @default(DRAFT)
+  signedAt         DateTime?
+  sentToPharmacyAt DateTime?
+  pharmacyRef      String?
+  dispensedAt      DateTime?
+  dispatchedAt     DateTime?
+  deliveredAt      DateTime?
+  trackingNumber   String?
+  courier          String?
+  version          Int                @default(1)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model RepeatRequest {
+  id             String              @id @default(cuid())
+  patientId      String
+  status         RepeatRequestStatus @default(REQUESTED)
+  requestedItems Json                @default("[]")
+  safetyFlags    Json                @default("[]")
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model Titration {
+  id                 String    @id @default(cuid())
+  patientId          String
+  prescriptionId     String
+  clinicianId        String
+  currentDose        String
+  targetDose         String
+  reviewIntervalDays Int       @default(14)
+  lastReviewAt       DateTime?
+  nextReviewAt       DateTime?
+  outcome            Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([patientId])
+}
+
+model MonitoringEntry {
+  id           String   @id @default(cuid())
+  patientId    String
+  titrationId  String?
+  type         String
+  value        Json
+  recordedAt   DateTime @default(now())
+  recordedById String
+  flagged      Boolean  @default(false)
+  flagReason   String?
+  createdAt    DateTime @default(now())
+
+  @@index([patientId])
+  @@index([type])
+}
+
+// -----------------------------------------------------------------------------
+// Communications & Consent
+// -----------------------------------------------------------------------------
+
+model Thread {
+  id           String   @id @default(cuid())
+  patientId    String
+  subject      String
+  status       String   @default("OPEN")
+  participants Json     @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages Message[]
+
+  @@index([patientId])
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  threadId    String
+  patientId   String
+  senderId    String
+  recipientId String
+  subject     String?
+  content     String
+  readAt      DateTime?
+  aiDraftId   String?
+  priority    String    @default("NORMAL")
+  category    String    @default("GENERAL")
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  thread  Thread  @relation(fields: [threadId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([threadId])
+  @@index([patientId])
+}
+
+model Consent {
+  id             String      @id @default(cuid())
+  patientId      String
+  type           ConsentType
+  wordingVersion String
+  wording        String
+  granted        Boolean     @default(false)
+  grantedAt      DateTime?
+  grantedById    String?
+  withdrawnAt    DateTime?
+  withdrawnById  String?
+  restrictions   Json        @default("{}")
+  encounterId    String?
+  createdAt      DateTime    @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([type])
+}
+
+// -----------------------------------------------------------------------------
+// Clinical AI
+// -----------------------------------------------------------------------------
+
+model Transcript {
+  id              String           @id @default(cuid())
+  patientId       String
+  clinicianId     String
+  encounterId     String
+  status          TranscriptStatus @default(NOT_STARTED)
+  language        String           @default("en-GB")
+  durationSeconds Int              @default(0)
+  consentId       String?
+  speakerMap      Json             @default("{}")
+  isSynthetic     Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  patient  Patient             @relation(fields: [patientId], references: [id])
+  segments TranscriptSegment[]
+
+  @@index([patientId])
+  @@index([encounterId])
+}
+
+model TranscriptSegment {
+  id            String   @id @default(cuid())
+  transcriptId  String
+  speakerId     String
+  speakerLabel  String
+  text          String
+  startTimeMs   Int
+  endTimeMs     Int
+  confidence    Float    @default(1.0)
+  bookmarked    Boolean  @default(false)
+  excluded      Boolean  @default(false)
+  correctedText String?
+  correctedById String?
+  topicTags     Json     @default("[]")
+  createdAt     DateTime @default(now())
+
+  transcript Transcript @relation(fields: [transcriptId], references: [id])
+
+  @@index([transcriptId])
+}
+
+model AIDraft {
+  id                 String        @id @default(cuid())
+  type               AIDraftType
+  status             AIDraftStatus @default(DRAFT_READY)
+  patientId          String
+  clinicianId        String
+  encounterId        String?
+  content            Json          @default("{}")
+  evidenceMap        Json          @default("{}")
+  provenance         Json          @default("{}")
+  safetyChecks       Json          @default("{}")
+  unsupportedClaims  Json          @default("[]")
+  contradictions     Json          @default("[]")
+  missingInformation Json          @default("[]")
+  modelProvider      String
+  modelVersion       String
+  promptTemplateId   String?
+  tokensUsed         Int           @default(0)
+  generationTimeMs   Int           @default(0)
+  reviewedById       String?
+  reviewedAt         DateTime?
+  approvedById       String?
+  approvedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model AIAuditEvent {
+  id            String   @id @default(cuid())
+  actorId       String
+  patientId     String?
+  draftId       String?
+  transcriptId  String?
+  action        String
+  modelProvider String?
+  detail        Json     @default("{}")
+  correlationId String
+  createdAt     DateTime @default(now())
+
+  @@index([actorId])
+  @@index([draftId])
+}
+
+// -----------------------------------------------------------------------------
+// Operations
+// -----------------------------------------------------------------------------
+
+model Appointment {
+  id              String   @id @default(cuid())
+  patientId       String
+  clinicianId     String
+  type            String
+  status          String   @default("SCHEDULED")
+  scheduledAt     DateTime
+  durationMinutes Int      @default(60)
+  videoRoomId     String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([clinicianId])
+  @@index([scheduledAt])
+}
+
+model Queue {
+  id             String    @id @default(cuid())
+  name           String
+  organisationId String
+  type           QueueType
+  createdAt      DateTime  @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+  entries      QueueEntry[]
+
+  @@index([organisationId])
+}
+
+model QueueEntry {
+  id                  String       @id @default(cuid())
+  queueId             String
+  patientId           String
+  priority            Int          @default(100)
+  stage               JourneyStage
+  assignedClinicianId String?
+  waitingSince        DateTime     @default(now())
+  metadata            Json         @default("{}")
+
+  queue   Queue   @relation(fields: [queueId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([queueId])
+  @@index([patientId])
+}
+
+model Complaint {
+  id           String    @id @default(cuid())
+  patientId    String
+  subject      String
+  description  String
+  status       String    @default("OPEN")
+  severity     String    @default("STANDARD")
+  assignedToId String?
+  resolution   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([patientId])
+}
+
+// -----------------------------------------------------------------------------
+// Timeline & Audit
+// -----------------------------------------------------------------------------
+
+model TimelineEvent {
+  id                String          @id @default(cuid())
+  patientId         String
+  eventType         String
+  occurredAt        DateTime
+  recordedAt        DateTime        @default(now())
+  actorId           String
+  title             String
+  summary           String
+  relatedEntityType String?
+  relatedEntityId   String?
+  visibility        VisibilityLevel
+  provenance        ProvenanceType
+  amendmentState    AmendmentState  @default(ORIGINAL)
+  metadata          Json            @default("{}")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId, occurredAt])
+  @@index([eventType])
+  @@index([visibility])
+}
+
+model AuditEvent {
+  id             String   @id @default(cuid())
+  actorId        String
+  action         String
+  resourceType   String
+  resourceId     String
+  organisationId String?
+  oldValue       Json?
+  newValue       Json?
+  reason         String?
+  ipAddress      String?
+  userAgent      String?
+  correlationId  String
+  createdAt      DateTime @default(now())
+
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Feature flags & workflow configuration
+// -----------------------------------------------------------------------------
+
+model FeatureFlag {
+  id                 String           @id @default(cuid())
+  key                String           @unique
+  description        String
+  defaultState       FeatureFlagState @default(DISABLED)
+  requiredCapability String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  overrides OrganisationFeatureFlag[]
+  changes   FeatureFlagChange[]
+}
+
+model OrganisationFeatureFlag {
+  id             String           @id @default(cuid())
+  organisationId String
+  flagKey        String
+  state          FeatureFlagState
+  rolloutPercent Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+  flag         FeatureFlag  @relation(fields: [flagKey], references: [key])
+
+  @@unique([organisationId, flagKey])
+}
+
+model FeatureFlagChange {
+  id            String           @id @default(cuid())
+  flagKey       String
+  actorId       String
+  reason        String
+  previousState FeatureFlagState
+  newState      FeatureFlagState
+  scope         String
+  createdAt     DateTime         @default(now())
+
+  flag FeatureFlag @relation(fields: [flagKey], references: [key])
+
+  @@index([flagKey])
+}
+
+model OrganisationWorkflowConfig {
+  id             String          @id @default(cuid())
+  organisationId String
+  settingKey     String
+  setting        WorkflowSetting
+  version        Int             @default(1)
+  effectiveFrom  DateTime        @default(now())
+  effectiveTo    DateTime?
+  actorId        String
+  createdAt      DateTime        @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+
+  @@index([organisationId, settingKey])
+}
+
+// -----------------------------------------------------------------------------
+// Financial
+// -----------------------------------------------------------------------------
+
+model Invoice {
+  id             String    @id @default(cuid())
+  patientId      String
+  organisationId String
+  amountPence    Int
+  currency       String    @default("GBP")
+  status         String    @default("DRAFT")
+  dueAt          DateTime
+  paidAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  payments Payment[]
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  invoiceId     String
+  amountPence   Int
+  method        String
+  status        String    @default("PENDING")
+  transactionId String?
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
